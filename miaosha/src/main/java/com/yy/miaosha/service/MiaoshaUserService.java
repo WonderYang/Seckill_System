@@ -1,6 +1,5 @@
 package com.yy.miaosha.service;
 
-import com.sun.deploy.net.HttpResponse;
 import com.yy.miaosha.dao.MiaoshaUserDao;
 import com.yy.miaosha.domain.MiaoshaUser;
 import com.yy.miaosha.exception.GlobalException;
@@ -32,8 +31,18 @@ public class MiaoshaUserService {
     //传给前端的Cookie名
     public static final String COOKIE_NAME_TOKEN = "token";
 
-    public MiaoshaUser getById(int id) {
-        return miaoshaUserDao.getById(id);
+    public MiaoshaUser getById(long id) {
+        //从缓存中获取
+        MiaoshaUser miaoshaUser = redisService.get(MiaoshaUserKey.getByID,""+id, MiaoshaUser.class);
+        if (miaoshaUser != null) {
+            return miaoshaUser;
+        }
+        //缓存中不存在，查询数据库并入缓存；
+        miaoshaUser = miaoshaUserDao.getById(id);
+        if (miaoshaUser != null) {
+            redisService.set(MiaoshaUserKey.getByID,""+id, miaoshaUser);
+        }
+        return miaoshaUser;
     }
 
     /**
@@ -41,13 +50,13 @@ public class MiaoshaUserService {
      * @param loginVO
      * @return
      */
-    public Boolean login(HttpServletResponse response, LoginVO loginVO) {
+    public String login(HttpServletResponse response, LoginVO loginVO) {
         if (loginVO == null) {
             throw new GlobalException(CodeMsg.SERVER_ERROR);
         }
         String mobile = loginVO.getMobile();
         String formPass = loginVO.getPassword();
-        MiaoshaUser miaoshaUser = miaoshaUserDao.getById(Long.parseLong(mobile));
+        MiaoshaUser miaoshaUser = getById(Long.parseLong(mobile));
         //验证手机号是否存在，不存在则代表登陆用户都不存在，直接返回错误；
         if (miaoshaUser == null) {
             throw new GlobalException(CodeMsg.MOBILE_NOT_EXIST);
@@ -65,7 +74,7 @@ public class MiaoshaUserService {
         //生成Cookie
         String token = UUIDUtil.uuid();
         addCookie(response, miaoshaUser, token);
-        return true;
+        return token;
 
     }
 

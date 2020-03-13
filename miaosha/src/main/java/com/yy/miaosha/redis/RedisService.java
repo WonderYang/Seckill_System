@@ -91,6 +91,24 @@ public class RedisService {
     }
 
     /**
+     * 删除某个key
+     * @param keyPrefix
+     * @param key
+     * @return
+     */
+    public boolean delete(KeyPrefix keyPrefix,String key) {
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
+            String realKey = keyPrefix.getPrefix()+key;
+            long res = jedis.del(realKey);
+            return res>0;
+        }finally {
+            returnToPool(jedis);
+        }
+    }
+
+    /**
      * 将某个key的值自减一，并返回减之后的值，如果当前key的值类型不是数字类型（Long），则会
      * @param keyPrefix
      * @param key
@@ -131,7 +149,7 @@ public class RedisService {
      * @param <T>
      * @return
      */
-    private  <T> T stringToBean(String value, Class<T> tClass) {
+    public static  <T> T stringToBean(String value, Class<T> tClass) {
         if(value == null || value.length()==0) {
             return null;
         }
@@ -153,7 +171,7 @@ public class RedisService {
      * @param <T>
      * @return
      */
-    private  <T> String beanToString(T value) {
+    public static  <T> String beanToString(T value) {
         if(value == null) {
             return null;
         }

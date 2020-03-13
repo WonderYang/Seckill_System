@@ -27,6 +27,8 @@ public class CodeMsg {
     //商品模块5003XX
 
     //订单模块5004XX
+    public static CodeMsg ORDER_NOT_EXIST = new CodeMsg(500400,"订单不存在");
+
 
     //秒杀模块5005XX
     public static CodeMsg MIAOSHA_OVER = new CodeMsg(500501,"商品已经被抢空啦");

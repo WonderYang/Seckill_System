@@ -6,6 +6,8 @@ import com.yy.miaosha.domain.MiaoshaGoods;
 import com.yy.miaosha.domain.MiaoshaOrder;
 import com.yy.miaosha.domain.MiaoshaUser;
 import com.yy.miaosha.domain.OrderInfo;
+import com.yy.miaosha.redis.RedisService;
+import com.yy.miaosha.redis.prefix.OrderKey;
 import com.yy.miaosha.vo.GoodsVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +25,12 @@ import java.util.Date;
 public class OrderService {
     @Resource
     OrderDao orderDao;
+    @Resource
+    RedisService redisService;
     public MiaoshaOrder getMiaoshaOrderByUserIdAndGoodsId(long userId, long goodsId) {
-
-        return orderDao.getMiaoshaOrderByUserIdGoodsId(userId, goodsId);
-
+        return redisService.get(OrderKey.getMiaoshaOrderByUidGid, userId+"_"+goodsId, MiaoshaOrder.class);
     }
+
     @Transactional
     public OrderInfo createOrder(MiaoshaUser user, GoodsVO goodsVO) {
         OrderInfo orderInfo = new OrderInfo();
@@ -48,6 +51,18 @@ public class OrderService {
         orderDao.insertMiaoshaOrder(miaoshaOrder);
         //redisService.set(OrderKey.getMiaoshaOrderByUidGid, ""+user.getId()+"_"+goodsVO.getId(), miaoshaOrder);
 
+        //存到redis，下次访问是否重复秒杀时直接访问redis（有效期为1小时），效率更高
+        redisService.set(OrderKey.getMiaoshaOrderByUidGid, user.getId()+"_"+goodsVO.getId(), miaoshaOrder);
+        return orderInfo;
+    }
+
+    /**
+     * 根据orderId查询
+     * @param id
+     * @return
+     */
+    public OrderInfo getOrderById(long id) {
+        OrderInfo orderInfo = orderDao.getOrderById(id);
         return orderInfo;
     }
 }

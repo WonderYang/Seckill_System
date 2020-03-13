@@ -1,12 +1,14 @@
 package com.yy.miaosha.controller;
 
 import com.yy.miaosha.domain.User;
+import com.yy.miaosha.rabbitMQ.MQSender;
 import com.yy.miaosha.redis.RedisService;
 import com.yy.miaosha.redis.prefix.KeyPrefix;
 import com.yy.miaosha.redis.prefix.UserKey;
 import com.yy.miaosha.result.CodeMsg;
 import com.yy.miaosha.result.Result;
 import com.yy.miaosha.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +25,9 @@ public class SimpleController {
 
     @Resource
     RedisService redisService;
+
+    @Autowired
+    MQSender mqSender;
 
     @RequestMapping("/demo1")
     public String thymeleaf(Model model) {
@@ -68,5 +73,26 @@ public class SimpleController {
     public Result<Boolean> testRedis2() {
         boolean res =  redisService.exists(UserKey.getById, "1");
         return Result.success(res);
+    }
+
+    @RequestMapping("/mq")
+    @ResponseBody
+    public Result<String> test6() {
+        mqSender.send("hello rabbitmq!!!!");
+        return Result.success("hello");
+    }
+
+    @RequestMapping("/mqTopic")
+    @ResponseBody
+    public Result<String> test7() {
+        mqSender.sendFanout("hello rabbitmq!!!!");
+        return Result.success("hello");
+    }
+
+    @RequestMapping("/header")
+    @ResponseBody
+    public Result<String> test8() {
+        mqSender.sendHeader("hello rabbitmq!!!!");
+        return Result.success("hello");
     }
 }

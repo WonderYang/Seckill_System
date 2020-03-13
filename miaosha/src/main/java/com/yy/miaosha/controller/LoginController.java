@@ -39,12 +39,12 @@ public class LoginController {
 
     @RequestMapping("/do_login")
     @ResponseBody
-    public Result<Boolean> doLogin(HttpServletResponse response, @Valid LoginVO loginVO) {
+    public Result<String> doLogin(HttpServletResponse response, @Valid LoginVO loginVO) {
         log.info(loginVO.toString());
-        userservice.login(response, loginVO);
+        String token = userservice.login(response, loginVO);
         //如果登陆不成功，login方法就会抛出异常，然后异常处理器就会捕捉到异常，然后进行处理；
 
-        return Result.success(true);
+        return Result.success(token);
 
     }
 }
