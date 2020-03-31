@@ -12,16 +12,18 @@ import com.yy.miaosha.result.Result;
 import com.yy.miaosha.service.GoodsService;
 import com.yy.miaosha.service.MiaoshaService;
 import com.yy.miaosha.service.OrderService;
+import com.yy.miaosha.utils.UUIDUtil;
 import com.yy.miaosha.vo.GoodsVO;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletResponse;
+import java.awt.image.BufferedImage;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 
@@ -62,12 +64,19 @@ public class MiaoshaController implements InitializingBean {
         }
     }
 
-    @RequestMapping(value = "/do_miaosha", method = RequestMethod.POST)
+    @RequestMapping(value = "/{path}/do_miaosha", method = RequestMethod.POST)
     @ResponseBody
     public Result<Integer> miaosha(Model model, MiaoshaUser miaoshaUser,
-                          @RequestParam("goodsId") long goodsId) {
+                          @RequestParam("goodsId") long goodsId,
+                          @PathVariable("path") String path) {
         if (miaoshaUser == null) {
             return Result.error(CodeMsg.SESSION_ERROR);
+        }
+
+        //验证path
+        boolean verify =  miaoshaService.checkPath(miaoshaUser, goodsId, path);
+        if (!verify) {
+            return Result.error(CodeMsg.REQUEST_ILLEGLE);
         }
 
         //如果成立则代表该商品预减库存已经小于零了，没必要再去访问Redis来预减库存了；
@@ -136,5 +145,54 @@ public class MiaoshaController implements InitializingBean {
         }
         long result = miaoshaService.getMiaoshaResult(user.getId(), goodsId);
         return Result.success(result);
+    }
+
+
+    @RequestMapping(value="/getMiaoshaPath", method=RequestMethod.GET)
+    @ResponseBody
+    public Result<String> getMiaoshaPath(Model model,MiaoshaUser user,
+                                      @RequestParam("goodsId")long goodsId,
+                                         @RequestParam(value="verifyCode", defaultValue="0")int verifyCode) {
+        model.addAttribute("user", user);
+        if(user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+
+        //验证验证码是否正确，验证码答案在生成的时候就已经放在Redis中了
+        boolean check = miaoshaService.checkVerifyCode(user, goodsId, verifyCode);
+        if(!check) {
+            return Result.error(CodeMsg.REQUEST_ILLEGLE);
+        }
+
+        String uuid =  miaoshaService.createPath(user, goodsId);
+        return Result.success(uuid);
+    }
+
+    /**
+     * 生成数学公式验证码图片
+     * @param response
+     * @param user
+     * @param goodsId
+     * @return
+     */
+    @RequestMapping(value="/verifyCode", method=RequestMethod.GET)
+    @ResponseBody
+    public Result<String> getMiaoshaVerifyCod(HttpServletResponse response, MiaoshaUser user,
+                                              @RequestParam("goodsId")long goodsId) {
+        if(user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+        try {
+            BufferedImage image  = miaoshaService.createVerifyCode(user, goodsId);
+            OutputStream out = response.getOutputStream();
+            //把图片直接输出到我们的输出流，即直接输出到前端页面
+            ImageIO.write(image, "JPEG", out);
+            out.flush();
+            out.close();
+            return null;
+        }catch(Exception e) {
+            e.printStackTrace();
+            return Result.error(CodeMsg.MIAOSHA_FAIL);
+        }
     }
 }

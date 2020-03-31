@@ -1,7 +1,9 @@
 package com.yy.miaosha.rabbitMQ;
 
 import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
 import org.springframework.amqp.core.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,6 +20,8 @@ import java.util.Map;
 public class MQConfig {
     //项目中使用Direct模式
     public static final String MIAOSHA_QUEUE = "miaosha_queue";
+
+
 
     //这些都是测试队列的几种模式的时候用的，与项目无关
     public static final String QUEUE = "queue";
